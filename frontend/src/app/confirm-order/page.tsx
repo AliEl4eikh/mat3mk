@@ -38,6 +38,11 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { paymentFormSchema } from "./paymentFormSchema";
+import {
+  isCouponArray,
+  type Coupon,
+  type PaymentFormValues,
+} from "./types";
 import OrderSummary from "./OrderSummary";
 import CheckoutSteps from "./CheckoutSteps";
 import OrderSuccess from "./OrderSuccess";
@@ -51,18 +56,18 @@ export default function EnhancedPaymentPage() {
   const { items, clearCart } = useCart();
   const subtotal = items.reduce(
     (acc, item) => acc + item.price * item.quantity,
-    0
+    0,
   );
   const shippingFee = 35;
   const [isOrderConfirmed, setIsOrderConfirmed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [orderNumber, setOrderNumber] = useState(null);
+  const [orderNumber, setOrderNumber] = useState<number | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
-  const [couponData, setCouponData] = useState(null);
-  const [couponError, setCouponError] = useState(null);
+  const [couponData, setCouponData] = useState<Coupon[] | null>(null);
+  const [couponError, setCouponError] = useState<string | null>(null);
   const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
 
-  const form = useForm({
+  const form = useForm<PaymentFormValues>({
     resolver: zodResolver(paymentFormSchema),
     defaultValues: {
       name: "",
@@ -80,12 +85,11 @@ export default function EnhancedPaymentPage() {
     if (savedFormData) {
       const parsedData = JSON.parse(savedFormData);
       form.reset(parsedData);
-      localStorage.removeItem("orderFormData"); 
+      localStorage.removeItem("orderFormData");
     }
   }, [form]);
 
   const createOrder = async (payload) => {
-
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/orders`, {
         method: "POST",
@@ -103,7 +107,7 @@ export default function EnhancedPaymentPage() {
     }
   };
 
-  const onSubmit = async (data) => {
+  const onSubmit = async (data: PaymentFormValues) => {
     if (!authService.isAuthenticated()) {
       localStorage.setItem("orderFormData", JSON.stringify(data));
       router.push("/login");
@@ -139,7 +143,7 @@ export default function EnhancedPaymentPage() {
     }
   };
 
-  const validateCoupon = async (code) => {
+  const validateCoupon = async (code: string): Promise<void> => {
     if (!code) {
       setCouponData(null);
       setCouponError(null);
@@ -150,10 +154,13 @@ export default function EnhancedPaymentPage() {
     setCouponError(null);
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/coupons/${code}`)
-      const data = await response.json();
-      if (response.ok) {
-        const coupon = data[0];
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/coupons/${code}`,
+      );
+      const data: unknown = await response.json();
+      if (response.ok && isCouponArray(data) && data.length > 0) {
+        const coupons = data;
+        const coupon = coupons[0];
         const myOrders = await fetch(
           `${process.env.NEXT_PUBLIC_API_URL}/orders/my-orders`,
           {
@@ -162,11 +169,13 @@ export default function EnhancedPaymentPage() {
               "Content-Type": "application/json",
               Authorization: `Bearer ${localStorage.getItem("token")}`,
             },
-          }
+          },
         );
-        const ordersData = await myOrders.json();
+        const ordersData = (await myOrders.json()) as {
+          orders: Array<{ coupon_id: number | null }>;
+        };
         const isCouponUsed = ordersData.orders.find(
-          (o) => o.coupon_id === coupon.id
+          (o) => o.coupon_id === coupon.id,
         );
 
         if (isCouponUsed) {
@@ -182,16 +191,28 @@ export default function EnhancedPaymentPage() {
           setCouponError("هذا الكوبون تم استخدامه الحد الأقصى من المرات");
           setCouponData(null);
         } else {
-          setCouponData(data);
+          setCouponData(coupons);
           setCouponError(null);
         }
       } else {
-        setCouponError(data.message || "كوبون غير صالح");
+        const apiMessage =
+          typeof data === "object" &&
+          data !== null &&
+          "message" in data &&
+          typeof data.message === "string"
+            ? data.message
+            : "كوبون غير صالح";
+
+        setCouponError(apiMessage);
         setCouponData(null);
       }
     } catch (error) {
       setCouponData(null);
-      setCouponError(error.message);
+      setCouponError(
+        error instanceof Error
+          ? error.message
+          : "Unexpected error while validating coupon",
+      );
     } finally {
       setIsValidatingCoupon(false);
     }
@@ -257,7 +278,7 @@ export default function EnhancedPaymentPage() {
                       <FormItem>
                         <FormLabel className="flex items-center gap-2 text-base font-semibold text-gray-700">
                           <User className="w-4 h-4" />
-                          اسم المستلم                          
+                          اسم المستلم
                         </FormLabel>
                         <FormControl>
                           <Input
@@ -429,7 +450,7 @@ export default function EnhancedPaymentPage() {
                     <PayPalScriptProvider
                       options={{
                         "client-id": process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID,
-                         "disable-funding": "card",
+                        "disable-funding": "card",
                       }}
                     >
                       <PayPalButtons
@@ -444,7 +465,7 @@ export default function EnhancedPaymentPage() {
                             purchase_units: [
                               {
                                 amount: {
-                                  value: total.toFixed(2) / 50, 
+                                  value: total.toFixed(2) / 50,
                                 },
                               },
                             ],

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import type { UseFormReturn } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -10,13 +11,31 @@ import {
   FormControl,
   FormMessage,
 } from "@/components/ui/form";
-import { CheckCircle2, Loader2, Package, Tag, Copy, ChevronDown, ChevronUp } from "lucide-react";
+import {
+  CheckCircle2,
+  Loader2,
+  Package,
+  Tag,
+  Copy,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react";
 import {
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { isCouponArray, type Coupon, type PaymentFormValues } from "./types";
+
+type CouponInputProps = {
+  form: UseFormReturn<PaymentFormValues>;
+  validateCoupon: (code: string) => Promise<void>;
+  isValidatingCoupon: boolean;
+  couponData: Coupon[] | null;
+  couponError: string | null;
+  discountAmount: number;
+};
 
 export default function CouponInput({
   form,
@@ -25,22 +44,26 @@ export default function CouponInput({
   couponData,
   couponError,
   discountAmount,
-}) {
-  const [availableCoupons, setAvailableCoupons] = useState([]);
+}: CouponInputProps) {
+  const [availableCoupons, setAvailableCoupons] = useState<Coupon[]>([]);
   const [loadingCoupons, setLoadingCoupons] = useState(true);
   const [showCoupons, setShowCoupons] = useState(false);
-  const [copiedCode, setCopiedCode] = useState("");
+  const [copiedCode, setCopiedCode] = useState<string>("");
 
   useEffect(() => {
-    fetchAvailableCoupons();
+    void fetchAvailableCoupons();
   }, []);
 
-  const fetchAvailableCoupons = async () => {
+  const fetchAvailableCoupons = async (): Promise<void> => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/coupons/active`);
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/coupons/active`,
+      );
       if (response.ok) {
-        const data = await response.json();
-        setAvailableCoupons(data);
+        const data: unknown = await response.json();
+        if (isCouponArray(data)) {
+          setAvailableCoupons(data);
+        }
       }
     } catch (error) {
       console.error("Error fetching coupons:", error);
@@ -49,14 +72,14 @@ export default function CouponInput({
     }
   };
 
-  const handleCopyCode = (code) => {
-    navigator.clipboard.writeText(code);
+  const handleCopyCode = (code: string): void => {
+    void navigator.clipboard.writeText(code);
     setCopiedCode(code);
     form.setValue("couponCode", code);
     setTimeout(() => setCopiedCode(""), 2000);
   };
 
-  const formatCouponDescription = (coupon) => {
+  const formatCouponDescription = (coupon: Coupon): string => {
     if (coupon.code === "SAVE20") {
       return "خصم 20% على جميع الطلبات";
     } else if (coupon.code === "WELCOME10") {
@@ -103,7 +126,7 @@ export default function CouponInput({
             />
             <Button
               type="button"
-              onClick={() => validateCoupon(form.getValues("couponCode"))}
+              onClick={() => validateCoupon(form.getValues("couponCode") ?? "")}
               className="h-12 px-6 bg-purple-600 hover:bg-purple-700 text-white"
               disabled={isValidatingCoupon}
             >
@@ -165,7 +188,8 @@ export default function CouponInput({
                               )}
                               {coupon.user_max_uses && (
                                 <p className="text-xs text-gray-500">
-                                  يمكن استخدامه {coupon.user_max_uses} {coupon.user_max_uses === 1 ? "مرة" : "مرات"}
+                                  يمكن استخدامه {coupon.user_max_uses}{" "}
+                                  {coupon.user_max_uses === 1 ? "مرة" : "مرات"}
                                 </p>
                               )}
                             </div>
@@ -204,7 +228,7 @@ export default function CouponInput({
             </Alert>
           )}
 
-          {couponData && (
+          {couponData && couponData.length > 0 && (
             <Alert className="mt-4 bg-green-50 border-green-200">
               <CheckCircle2 className="h-4 w-4 text-green-600" />
               <AlertDescription className="text-green-800">
