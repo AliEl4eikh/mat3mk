@@ -8,6 +8,7 @@ import React, {
 import { debounce } from "lodash";
 import Link from "next/link";
 import Image from "next/image";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 const FilterIcon = () => (
@@ -299,21 +300,23 @@ export default function DishSearch({ onSearchActive }) {
             className="w-full px-4 py-3 border border-gray-400/50 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-orange-400 bg-white/10 backdrop-blur-sm text-white placeholder-gray-300 pr-10 transition-all duration-200"
           />
           {query && (
-            <button
+            <Button
               type="button"
+              variant="ghost"
               onClick={() => setQuery("")}
-              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-orange-300 transition-colors p-1 rounded-full hover:bg-white/10"
+              className="absolute left-3 top-1/2 h-auto -translate-y-1/2 rounded-full p-1 text-gray-400 transition-colors hover:bg-white/10 hover:text-orange-300"
               aria-label="مسح البحث"
             >
               <ClearIcon />
-            </button>
+            </Button>
           )}
         </div>
 
-        <button
+        <Button
           type="button"
+          variant="ghost"
           onClick={() => setIsFilterVisible(!isFilterVisible)}
-          className={`flex items-center space-x-2 space-x-reverse px-4 py-3 border rounded-md transition-all duration-200 ${
+          className={`rounded-md border px-4 py-3 transition-all duration-200 ${
             isFilterVisible || hasActiveFilters
               ? "bg-orange-500/20 text-orange-300 border-orange-400/50 shadow-lg shadow-orange-500/10"
               : "bg-white/10 hover:bg-white/20 text-white border-gray-400/50 hover:border-gray-300/70"
@@ -327,7 +330,7 @@ export default function DishSearch({ onSearchActive }) {
               {activeFilters.length}
             </span>
           )}
-        </button>
+        </Button>
       </div>
 
       {/* Active Filters Display */}
@@ -339,23 +342,25 @@ export default function DishSearch({ onSearchActive }) {
               className="inline-flex items-center px-3 py-1 bg-white/10 text-white text-xs rounded-full border border-white/20 backdrop-blur-sm"
             >
               {filter.value}
-              <button
+              <Button
                 type="button"
+                variant="ghost"
                 onClick={() => clearSpecificFilter(filter.type)}
-                className="mr-2 hover:text-red-300 transition-colors"
+                className="mr-2  p-0 transition-colors hover:text-red-300"
                 aria-label={`إزالة فلتر ${filter.value}`}
               >
                 <ClearIcon />
-              </button>
+              </Button>
             </span>
           ))}
-          <button
+          <Button
             type="button"
+            variant="ghost"
             onClick={clearAllFilters}
-            className="text-xs text-orange-300 hover:text-orange-200 underline transition-colors px-2 py-1"
+            className="h-auto px-2 py-1 text-xs text-orange-300 underline transition-colors hover:text-orange-200"
           >
             مسح جميع الفلاتر
-          </button>
+          </Button>
         </div>
       )}
 
@@ -364,14 +369,15 @@ export default function DishSearch({ onSearchActive }) {
         <div className="absolute top-full right-0 mt-3 w-80 bg-gray-900/95 backdrop-blur-md border border-gray-600/50 rounded-xl shadow-2xl shadow-black/50 z-20 p-5 animate-in slide-in-from-top-2 duration-200">
           <div className="flex items-center justify-between mb-5">
             <h3 className="text-white font-semibold text-lg">خيارات التصفية</h3>
-            <button
+            <Button
               type="button"
+              variant="ghost"
               onClick={() => setIsFilterVisible(false)}
-              className="text-gray-400 hover:text-white focus:outline-none transition-colors p-2 rounded-full hover:bg-white/10"
+              className="h-auto rounded-full p-2 text-gray-400 transition-colors hover:bg-white/10 hover:text-white"
               aria-label="إغلاق التصفية"
             >
               <ClearIcon />
-            </button>
+            </Button>
           </div>
 
           <div className="space-y-5">
@@ -471,20 +477,22 @@ export default function DishSearch({ onSearchActive }) {
 
             {/* Action Buttons */}
             <div className="flex space-x-3 space-x-reverse pt-3">
-              <button
+              <Button
                 type="button"
+                variant="ghost"
                 onClick={clearAllFilters}
-                className="flex-1 px-4 py-2.5 bg-red-600/80 hover:bg-red-600 text-white rounded-lg transition-all duration-200 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-red-500 backdrop-blur-sm"
+                className="h-auto flex-1 rounded-lg bg-red-600/80 px-4 py-2.5 text-sm font-medium text-white backdrop-blur-sm transition-all duration-200 hover:bg-red-600 focus:ring-2 focus:ring-red-500"
               >
                 إعادة تعيين جميع الفلاتر
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
+                variant="ghost"
                 onClick={() => setIsFilterVisible(false)}
-                className="flex-1 px-4 py-2.5 bg-orange-600/80 hover:bg-orange-600 text-white rounded-lg transition-all duration-200 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-orange-500 backdrop-blur-sm"
+                className="h-auto flex-1 rounded-lg bg-orange-600/80 px-4 py-2.5 text-sm font-medium text-white backdrop-blur-sm transition-all duration-200 hover:bg-orange-600 focus:ring-2 focus:ring-orange-500"
               >
                 تطبيق
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -513,13 +521,14 @@ export default function DishSearch({ onSearchActive }) {
               <div className="px-6 py-8 text-center text-gray-300 space-y-3">
                 <p className="text-lg">لا توجد نتائج مطابقة</p>
                 {hasActiveFilters && (
-                  <button
+                  <Button
                     type="button"
+                    variant="ghost"
                     onClick={clearAllFilters}
-                    className="text-sm text-orange-300 hover:text-orange-200 underline transition-colors px-3 py-1 rounded-md hover:bg-white/5"
+                    className="h-auto rounded-md px-3 py-1 text-sm text-orange-300 underline transition-colors hover:bg-white/5 hover:text-orange-200"
                   >
                     مسح جميع الفلاتر والمحاولة مرة أخرى
-                  </button>
+                  </Button>
                 )}
               </div>
             )}
