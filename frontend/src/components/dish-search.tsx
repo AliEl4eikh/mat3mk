@@ -1,7 +1,14 @@
-import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useRef,
+  useCallback,
+} from "react";
 import { debounce } from "lodash";
 import Link from "next/link";
 import Image from "next/image";
+import { Input } from "@/components/ui/input";
 
 const FilterIcon = () => (
   <svg
@@ -38,7 +45,11 @@ const ClearIcon = () => (
 );
 
 const LoadingSpinner = () => (
-  <svg className="animate-spin h-4 w-4 text-gray-300" fill="none" viewBox="0 0 24 24">
+  <svg
+    className="animate-spin h-4 w-4 text-gray-300"
+    fill="none"
+    viewBox="0 0 24 24"
+  >
     <circle
       className="opacity-25"
       cx="12"
@@ -60,14 +71,14 @@ export default function DishSearch({ onSearchActive }) {
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  
+
   // Filter state
   const [sortBy, setSortBy] = useState("relevance");
   const [filterCategory, setFilterCategory] = useState("all");
   const [isFilterVisible, setIsFilterVisible] = useState(false);
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
-  
+
   // Categories state
   const [categories, setCategories] = useState([]);
   const [categoryError, setCategoryError] = useState(null);
@@ -79,19 +90,26 @@ export default function DishSearch({ onSearchActive }) {
   const activeFilters = useMemo(() => {
     const filters = [];
     if (filterCategory !== "all") {
-      const category = categories.find(c => c.category_id === parseInt(filterCategory));
-      filters.push({ type: 'category', value: category?.category_name || filterCategory });
+      const category = categories.find(
+        (c) => c.category_id === parseInt(filterCategory),
+      );
+      filters.push({
+        type: "category",
+        value: category?.category_name || filterCategory,
+      });
     }
-    if (minPrice) filters.push({ type: 'minPrice', value: `من ${minPrice} جنيه` });
-    if (maxPrice) filters.push({ type: 'maxPrice', value: `إلى ${maxPrice} جنيه` });
+    if (minPrice)
+      filters.push({ type: "minPrice", value: `من ${minPrice} جنيه` });
+    if (maxPrice)
+      filters.push({ type: "maxPrice", value: `إلى ${maxPrice} جنيه` });
     if (sortBy !== "relevance") {
       const sortLabels = {
-        'price_asc': 'السعر: الأقل أولاً',
-        'price_desc': 'السعر: الأعلى أولاً',
-        'name_asc': 'الاسم (أ-ي)',
-        'name_desc': 'الاسم (ي-أ)'
+        price_asc: "السعر: الأقل أولاً",
+        price_desc: "السعر: الأعلى أولاً",
+        name_asc: "الاسم (أ-ي)",
+        name_desc: "الاسم (ي-أ)",
       };
-      filters.push({ type: 'sort', value: sortLabels[sortBy] });
+      filters.push({ type: "sort", value: sortLabels[sortBy] });
     }
     return filters;
   }, [filterCategory, minPrice, maxPrice, sortBy, categories]);
@@ -100,7 +118,7 @@ export default function DishSearch({ onSearchActive }) {
 
   const isSearchActive = useMemo(
     () => query.length > 0 || isFilterVisible || hasActiveFilters,
-    [query, isFilterVisible, hasActiveFilters]
+    [query, isFilterVisible, hasActiveFilters],
   );
 
   useEffect(() => {
@@ -149,7 +167,7 @@ export default function DishSearch({ onSearchActive }) {
     () =>
       debounce(async (q, sort, categoryId, minP, maxP) => {
         const areFiltersActive = q || categoryId !== "all" || minP || maxP;
-        
+
         if (!areFiltersActive) {
           setResults([]);
           setError(null);
@@ -158,23 +176,24 @@ export default function DishSearch({ onSearchActive }) {
 
         setLoading(true);
         setError(null);
-        
+
         try {
           const params = new URLSearchParams();
           if (q) params.append("q", q.trim());
           if (sort !== "relevance") params.append("sortBy", sort);
-          if (categoryId !== "all") params.append("filterByCategory", categoryId);
+          if (categoryId !== "all")
+            params.append("filterByCategory", categoryId);
           if (minP && !isNaN(minP)) params.append("minPrice", minP);
           if (maxP && !isNaN(maxP)) params.append("maxPrice", maxP);
 
           const response = await fetch(
-            `http://localhost:5000/api/dishes?${params.toString()}`
+            `http://localhost:5000/api/dishes?${params.toString()}`,
           );
-          
+
           if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
           }
-          
+
           const data = await response.json();
           setResults(Array.isArray(data) ? data : []);
         } catch (err) {
@@ -185,7 +204,7 @@ export default function DishSearch({ onSearchActive }) {
           setLoading(false);
         }
       }, 300),
-    []
+    [],
   );
 
   useEffect(() => {
@@ -207,16 +226,16 @@ export default function DishSearch({ onSearchActive }) {
 
   const clearSpecificFilter = useCallback((filterType) => {
     switch (filterType) {
-      case 'category':
+      case "category":
         setFilterCategory("all");
         break;
-      case 'minPrice':
+      case "minPrice":
         setMinPrice("");
         break;
-      case 'maxPrice':
+      case "maxPrice":
         setMaxPrice("");
         break;
-      case 'sort':
+      case "sort":
         setSortBy("relevance");
         break;
       default:
@@ -224,38 +243,53 @@ export default function DishSearch({ onSearchActive }) {
     }
   }, []);
 
-  const handlePriceChange = useCallback((value, type) => {
-    const numValue = value === "" ? "" : Math.max(0, parseFloat(value) || 0).toString();
-    
-    if (type === 'min') {
-      setMinPrice(numValue);
-      if (maxPrice && numValue && parseFloat(maxPrice) < parseFloat(numValue)) {
-        setMaxPrice(numValue);
-      }
-    } else if (type === 'max') {
-      setMaxPrice(numValue);
-      if (minPrice && numValue && parseFloat(minPrice) > parseFloat(numValue)) {
-        setMinPrice(numValue);
-      }
-    }
-  }, [minPrice, maxPrice]);
+  const handlePriceChange = useCallback(
+    (value, type) => {
+      const numValue =
+        value === "" ? "" : Math.max(0, parseFloat(value) || 0).toString();
 
-  const handleKeyDown = useCallback((e) => {
-    if (e.key === 'Escape') {
-      if (isFilterVisible) {
-        setIsFilterVisible(false);
-      } else if (query || hasActiveFilters) {
-        clearAllFilters();
+      if (type === "min") {
+        setMinPrice(numValue);
+        if (
+          maxPrice &&
+          numValue &&
+          parseFloat(maxPrice) < parseFloat(numValue)
+        ) {
+          setMaxPrice(numValue);
+        }
+      } else if (type === "max") {
+        setMaxPrice(numValue);
+        if (
+          minPrice &&
+          numValue &&
+          parseFloat(minPrice) > parseFloat(numValue)
+        ) {
+          setMinPrice(numValue);
+        }
       }
-    }
-  }, [isFilterVisible, query, hasActiveFilters, clearAllFilters]);
+    },
+    [minPrice, maxPrice],
+  );
+
+  const handleKeyDown = useCallback(
+    (e) => {
+      if (e.key === "Escape") {
+        if (isFilterVisible) {
+          setIsFilterVisible(false);
+        } else if (query || hasActiveFilters) {
+          clearAllFilters();
+        }
+      }
+    },
+    [isFilterVisible, query, hasActiveFilters, clearAllFilters],
+  );
 
   return (
     <div className="relative w-full max-w-2xl mx-auto" ref={searchContainerRef}>
       {/* Search Input and Filter Button */}
       <div className="flex items-center space-x-2 space-x-reverse">
         <div className="relative flex-grow">
-          <input
+          <Input
             ref={inputRef}
             type="search"
             value={query}
@@ -275,14 +309,14 @@ export default function DishSearch({ onSearchActive }) {
             </button>
           )}
         </div>
-        
+
         <button
           type="button"
           onClick={() => setIsFilterVisible(!isFilterVisible)}
           className={`flex items-center space-x-2 space-x-reverse px-4 py-3 border rounded-md transition-all duration-200 ${
             isFilterVisible || hasActiveFilters
-              ? 'bg-orange-500/20 text-orange-300 border-orange-400/50 shadow-lg shadow-orange-500/10'
-              : 'bg-white/10 hover:bg-white/20 text-white border-gray-400/50 hover:border-gray-300/70'
+              ? "bg-orange-500/20 text-orange-300 border-orange-400/50 shadow-lg shadow-orange-500/10"
+              : "bg-white/10 hover:bg-white/20 text-white border-gray-400/50 hover:border-gray-300/70"
           }`}
           aria-label="تصفية النتائج"
         >
@@ -343,7 +377,10 @@ export default function DishSearch({ onSearchActive }) {
           <div className="space-y-5">
             {/* Sort By */}
             <div>
-              <label htmlFor="sortBy" className="block text-sm font-medium text-gray-200 mb-2">
+              <label
+                htmlFor="sortBy"
+                className="block text-sm font-medium text-gray-200 mb-2"
+              >
                 ترتيب حسب
               </label>
               <select
@@ -362,7 +399,10 @@ export default function DishSearch({ onSearchActive }) {
 
             {/* Category Filter */}
             <div>
-              <label htmlFor="filterCategory" className="block text-sm font-medium text-gray-200 mb-2">
+              <label
+                htmlFor="filterCategory"
+                className="block text-sm font-medium text-gray-200 mb-2"
+              >
                 تصفية حسب الفئة
               </label>
               <select
@@ -374,7 +414,10 @@ export default function DishSearch({ onSearchActive }) {
               >
                 <option value="all">كل الفئات</option>
                 {categories.map((category) => (
-                  <option key={category.category_id} value={category.category_id}>
+                  <option
+                    key={category.category_id}
+                    value={category.category_id}
+                  >
                     {category.category_name}
                   </option>
                 ))}
@@ -396,32 +439,34 @@ export default function DishSearch({ onSearchActive }) {
                 نطاق السعر (جنيه)
               </label>
               <div className="flex items-center space-x-3 space-x-reverse">
-                <input
+                <Input
                   type="number"
                   value={minPrice}
-                  onChange={(e) => handlePriceChange(e.target.value, 'min')}
+                  onChange={(e) => handlePriceChange(e.target.value, "min")}
                   placeholder="من"
                   min="0"
                   step="0.01"
                   className="w-full text-white px-3 py-2.5 border border-gray-600/50 rounded-lg bg-gray-800/50 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-orange-400 transition-all duration-200"
                 />
                 <span className="text-gray-400 px-2 font-medium">-</span>
-                <input
+                <Input
                   type="number"
                   value={maxPrice}
-                  onChange={(e) => handlePriceChange(e.target.value, 'max')}
+                  onChange={(e) => handlePriceChange(e.target.value, "max")}
                   placeholder="إلى"
                   min="0"
                   step="0.01"
                   className="w-full text-white px-3 py-2.5 border border-gray-600/50 rounded-lg bg-gray-800/50 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-orange-400 transition-all duration-200"
                 />
               </div>
-              {minPrice && maxPrice && parseFloat(minPrice) > parseFloat(maxPrice) && (
-                <p className="text-yellow-300 text-xs mt-2 flex items-center">
-                  <span className="mr-1">⚠️</span>
-                  الحد الأدنى للسعر لا يمكن أن يكون أكبر من الحد الأقصى
-                </p>
-              )}
+              {minPrice &&
+                maxPrice &&
+                parseFloat(minPrice) > parseFloat(maxPrice) && (
+                  <p className="text-yellow-300 text-xs mt-2 flex items-center">
+                    <span className="mr-1">⚠️</span>
+                    الحد الأدنى للسعر لا يمكن أن يكون أكبر من الحد الأقصى
+                  </p>
+                )}
             </div>
 
             {/* Action Buttons */}
@@ -454,32 +499,39 @@ export default function DishSearch({ onSearchActive }) {
               <span className="mr-3">جاري البحث...</span>
             </div>
           )}
-          
+
           {error && (
             <div className="px-6 py-5 text-center text-red-300 bg-red-900/30 border-b border-red-800/50 backdrop-blur-sm">
               {error}
             </div>
           )}
-          
-          {!loading && !error && results.length === 0 && (query || hasActiveFilters) && (
-            <div className="px-6 py-8 text-center text-gray-300 space-y-3">
-              <p className="text-lg">لا توجد نتائج مطابقة</p>
-              {hasActiveFilters && (
-                <button
-                  type="button"
-                  onClick={clearAllFilters}
-                  className="text-sm text-orange-300 hover:text-orange-200 underline transition-colors px-3 py-1 rounded-md hover:bg-white/5"
-                >
-                  مسح جميع الفلاتر والمحاولة مرة أخرى
-                </button>
-              )}
-            </div>
-          )}
-          
+
+          {!loading &&
+            !error &&
+            results.length === 0 &&
+            (query || hasActiveFilters) && (
+              <div className="px-6 py-8 text-center text-gray-300 space-y-3">
+                <p className="text-lg">لا توجد نتائج مطابقة</p>
+                {hasActiveFilters && (
+                  <button
+                    type="button"
+                    onClick={clearAllFilters}
+                    className="text-sm text-orange-300 hover:text-orange-200 underline transition-colors px-3 py-1 rounded-md hover:bg-white/5"
+                  >
+                    مسح جميع الفلاتر والمحاولة مرة أخرى
+                  </button>
+                )}
+              </div>
+            )}
+
           {!loading && !error && results.length > 0 && (
             <>
               <div className="px-6 py-3 bg-gray-800/50 border-b border-gray-700/50 text-sm text-gray-300 backdrop-blur-sm">
-                عثر على <span className="text-orange-300 font-medium">{results.length}</span> نتائج
+                عثر على{" "}
+                <span className="text-orange-300 font-medium">
+                  {results.length}
+                </span>{" "}
+                نتائج
               </div>
               <ul>
                 {results.map((dish) => (
@@ -510,7 +562,9 @@ export default function DishSearch({ onSearchActive }) {
                           {dish.name}
                         </p>
                         <p className="text-sm text-gray-400 mt-1">
-                          <span className="text-orange-300 font-medium">{dish.price} جنيه</span>
+                          <span className="text-orange-300 font-medium">
+                            {dish.price} جنيه
+                          </span>
                           {dish.category_name && (
                             <span className="mr-3 text-gray-500">
                               • {dish.category_name}
