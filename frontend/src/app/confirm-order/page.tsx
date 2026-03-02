@@ -38,11 +38,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { paymentFormSchema } from "./paymentFormSchema";
-import {
-  isCouponArray,
-  type Coupon,
-  type PaymentFormValues,
-} from "./types";
+import { isCouponArray, type Coupon, type PaymentFormValues } from "./types";
 import OrderSummary from "./OrderSummary";
 import CheckoutSteps from "./CheckoutSteps";
 import OrderSuccess from "./OrderSuccess";
