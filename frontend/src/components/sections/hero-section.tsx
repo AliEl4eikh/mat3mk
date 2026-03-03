@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import Link from "next/link";
 import Navigation from "./navigation";
-import DishSearch from "@/components/dish-search"; 
-import { motion, AnimatePresence } from "framer-motion"; 
+import DishSearch from "@/components/dish-search";
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function HeroSection() {
   const [isSearchActive, setIsSearchActive] = useState(false);
@@ -41,9 +41,7 @@ export default function HeroSection() {
 
         {/* Search Bar Container */}
         <div className="w-full max-w-2xl mx-auto flex flex-col gap-4 mb-8">
-          <DishSearch
-            onSearchActive={setIsSearchActive}
-          />
+          <DishSearch setIsSearchActive={setIsSearchActive} />
         </div>
 
         <AnimatePresence>

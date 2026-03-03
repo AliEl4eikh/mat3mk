@@ -11,6 +11,66 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
+type Dish = {
+  id: number;
+  image_path: string | null;
+  name: string;
+  price: number;
+  category_name: string;
+};
+
+const isObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
+const isDish = (obj: unknown): obj is Dish => {
+  if (!isObject(obj)) return false;
+  return (
+    typeof obj === "object" &&
+    obj !== null &&
+    typeof obj.id === "number" &&
+    (typeof obj.image_path === "string" || obj.image_path === null) &&
+    typeof obj.name === "string" &&
+    typeof obj.price === "number" &&
+    typeof obj.category_name === "string"
+  );
+};
+
+type Category = {
+  category_id: number;
+  category_name: string;
+};
+
+type SortBy =
+  | "relevance"
+  | "price_asc"
+  | "price_desc"
+  | "name_asc"
+  | "name_desc";
+type FilterType = "category" | "minPrice" | "maxPrice" | "sort";
+type PriceBoundType = "min" | "max";
+const SORT_BY_VALUES: SortBy[] = [
+  "relevance",
+  "price_asc",
+  "price_desc",
+  "name_asc",
+  "name_desc",
+];
+
+type Filters = {
+  type: FilterType;
+  value: string;
+};
+
+const isSortBy = (value: string): value is SortBy =>
+  SORT_BY_VALUES.includes(value as SortBy);
+
+const isCategory = (obj: unknown): obj is Category => {
+  if (!isObject(obj)) return false;
+  return (
+    typeof obj.category_id === "number" && typeof obj.category_name === "string"
+  );
+};
+
 const FilterIcon = () => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -67,29 +127,33 @@ const LoadingSpinner = () => (
   </svg>
 );
 
-export default function DishSearch({ onSearchActive }) {
+export default function DishSearch({
+  setIsSearchActive,
+}: {
+  setIsSearchActive: (active: boolean) => void;
+}) {
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState([]);
+  const [results, setResults] = useState<Dish[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string>("");
 
   // Filter state
-  const [sortBy, setSortBy] = useState("relevance");
-  const [filterCategory, setFilterCategory] = useState("all");
-  const [isFilterVisible, setIsFilterVisible] = useState(false);
-  const [minPrice, setMinPrice] = useState("");
-  const [maxPrice, setMaxPrice] = useState("");
+  const [sortBy, setSortBy] = useState<SortBy>("relevance");
+  const [filterCategory, setFilterCategory] = useState<string>("all");
+  const [isFilterVisible, setIsFilterVisible] = useState<boolean>(false);
+  const [minPrice, setMinPrice] = useState<string>("");
+  const [maxPrice, setMaxPrice] = useState<string>("");
 
   // Categories state
-  const [categories, setCategories] = useState([]);
-  const [categoryError, setCategoryError] = useState(null);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [categoryError, setCategoryError] = useState<string>("");
   const [categoriesLoading, setCategoriesLoading] = useState(false);
 
-  const searchContainerRef = useRef(null);
-  const inputRef = useRef(null);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  const activeFilters = useMemo(() => {
-    const filters = [];
+  const activeFilters = useMemo((): Filters[] => {
+    const filters: Filters[] = [];
     if (filterCategory !== "all") {
       const category = categories.find(
         (c) => c.category_id === parseInt(filterCategory),
@@ -104,7 +168,7 @@ export default function DishSearch({ onSearchActive }) {
     if (maxPrice)
       filters.push({ type: "maxPrice", value: `إلى ${maxPrice} جنيه` });
     if (sortBy !== "relevance") {
-      const sortLabels = {
+      const sortLabels: Record<Exclude<SortBy, "relevance">, string> = {
         price_asc: "السعر: الأقل أولاً",
         price_desc: "السعر: الأعلى أولاً",
         name_asc: "الاسم (أ-ي)",
@@ -123,20 +187,22 @@ export default function DishSearch({ onSearchActive }) {
   );
 
   useEffect(() => {
-    if (onSearchActive) onSearchActive(isSearchActive);
-  }, [isSearchActive, onSearchActive]);
+    setIsSearchActive(isSearchActive);
+  }, [isSearchActive, setIsSearchActive]);
 
   useEffect(() => {
     const fetchCategories = async () => {
       setCategoriesLoading(true);
-      setCategoryError(null);
+      setCategoryError("");
       try {
         const response = await fetch(`http://localhost:5000/api/categories`);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
-        const data = await response.json();
-        setCategories(Array.isArray(data) ? data : []);
+        const data: unknown = await response.json();
+        setCategories(
+          Array.isArray(data) && data.every(isCategory) ? data : [],
+        );
       } catch (err) {
         setCategoryError("فشل في تحميل التصنيفات");
         console.error("Error fetching categories:", err);
@@ -149,7 +215,8 @@ export default function DishSearch({ onSearchActive }) {
   }, []);
 
   useEffect(() => {
-    const handleClickOutside = (event) => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (!(event.target instanceof Node)) return;
       if (
         searchContainerRef.current &&
         !searchContainerRef.current.contains(event.target)
@@ -166,45 +233,65 @@ export default function DishSearch({ onSearchActive }) {
 
   const fetchDishes = useMemo(
     () =>
-      debounce(async (q, sort, categoryId, minP, maxP) => {
-        const areFiltersActive = q || categoryId !== "all" || minP || maxP;
+      debounce(
+        async (
+          q: string,
+          sort: SortBy,
+          categoryId: string,
+          minP: string,
+          maxP: string,
+        ) => {
+          const areFiltersActive = q || categoryId !== "all" || minP || maxP;
 
-        if (!areFiltersActive) {
-          setResults([]);
-          setError(null);
-          return;
-        }
-
-        setLoading(true);
-        setError(null);
-
-        try {
-          const params = new URLSearchParams();
-          if (q) params.append("q", q.trim());
-          if (sort !== "relevance") params.append("sortBy", sort);
-          if (categoryId !== "all")
-            params.append("filterByCategory", categoryId);
-          if (minP && !isNaN(minP)) params.append("minPrice", minP);
-          if (maxP && !isNaN(maxP)) params.append("maxPrice", maxP);
-
-          const response = await fetch(
-            `http://localhost:5000/api/dishes?${params.toString()}`,
-          );
-
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+          if (!areFiltersActive) {
+            setResults([]);
+            setError("");
+            return;
           }
 
-          const data = await response.json();
-          setResults(Array.isArray(data) ? data : []);
-        } catch (err) {
-          console.error("Search error:", err);
-          setError("حدث خطأ أثناء البحث. حاول مرة أخرى.");
-          setResults([]);
-        } finally {
-          setLoading(false);
-        }
-      }, 300),
+          setLoading(true);
+          setError("");
+
+          try {
+            const params = new URLSearchParams();
+            if (q) params.append("q", q.trim());
+            if (sort !== "relevance") params.append("sortBy", sort);
+            if (categoryId !== "all")
+              params.append("filterByCategory", categoryId);
+            if (minP && !Number.isNaN(Number(minP)))
+              params.append("minPrice", minP);
+            if (maxP && !Number.isNaN(Number(maxP)))
+              params.append("maxPrice", maxP);
+
+            const response = await fetch(
+              `http://localhost:5000/api/dishes?${params.toString()}`,
+            );
+
+            if (!response.ok) {
+              throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data: unknown = await response.json();
+            if (
+              data &&
+              Array.isArray(data) &&
+              data.every((item) => isDish(item))
+            ) {
+              setResults(data);
+            } else {
+              setResults([]);
+              setError("تنسيق البيانات غير صحيح من الخادم");
+            }
+          } catch (err) {
+            console.error("Search error:", err);
+            setError("حدث خطأ أثناء البحث. حاول مرة أخرى.");
+            setResults([]);
+          } finally {
+            setLoading(false);
+          }
+        },
+        300,
+      ),
     [],
   );
 
@@ -220,12 +307,12 @@ export default function DishSearch({ onSearchActive }) {
     setMinPrice("");
     setMaxPrice("");
     setResults([]);
-    setError(null);
+    setError("");
     setIsFilterVisible(false);
     inputRef.current?.focus();
   }, []);
 
-  const clearSpecificFilter = useCallback((filterType) => {
+  const clearSpecificFilter = useCallback((filterType: FilterType) => {
     switch (filterType) {
       case "category":
         setFilterCategory("all");
@@ -245,7 +332,7 @@ export default function DishSearch({ onSearchActive }) {
   }, []);
 
   const handlePriceChange = useCallback(
-    (value, type) => {
+    (value: string, type: PriceBoundType) => {
       const numValue =
         value === "" ? "" : Math.max(0, parseFloat(value) || 0).toString();
 
@@ -273,7 +360,7 @@ export default function DishSearch({ onSearchActive }) {
   );
 
   const handleKeyDown = useCallback(
-    (e) => {
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
       if (e.key === "Escape") {
         if (isFilterVisible) {
           setIsFilterVisible(false);
@@ -392,7 +479,10 @@ export default function DishSearch({ onSearchActive }) {
               <select
                 id="sortBy"
                 value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (isSortBy(value)) setSortBy(value);
+                }}
                 className="w-full text-white px-3 py-2.5 border border-gray-600/50 rounded-lg bg-gray-800/50 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-orange-400 transition-all duration-200"
               >
                 <option value="relevance">الأكثر صلة</option>
